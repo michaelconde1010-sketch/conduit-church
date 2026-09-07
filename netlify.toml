@@ -1,0 +1,26 @@
+# Builds and publishes the merged Conduit Studio:
+#   /                 → landing page (presentation/index.html)
+#   /app.html         → operator studio (React)
+#   /app.html#/output → projector window
+#   /.netlify/functions/bible   → Bible text proxy
+#   /.netlify/functions/detect  → AI verse detection proxy
+#
+# No `base` key on purpose. Setting base makes Netlify treat that folder as the
+# repo root, which puts netlify/functions out of bounds ("must be inside the
+# repository root"). Keeping the real root means every path below stays inside
+# it — at the cost of installing deps explicitly, since there's no root
+# package.json for Netlify to detect.
+
+[build]
+  command = "npm install --prefix presentation && npm run build --prefix presentation"
+  publish = "presentation/dist"
+  functions = "netlify/functions"
+
+[functions]
+  node_bundler = "esbuild"
+
+# Convenience alias so /app works as well as /app.html
+[[redirects]]
+  from = "/app"
+  to = "/app.html"
+  status = 301

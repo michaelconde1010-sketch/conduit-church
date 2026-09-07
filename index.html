@@ -1,0 +1,458 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; connect-src 'none'; img-src 'self' data:; frame-src 'none'; object-src 'none';">
+<title>Conduit — AI Bible Verse Display for Churches</title>
+<meta name="description" content="Conduit listens to your pastor in real time, detects Bible verse references automatically, and displays them on screen. One tap to confirm before anything goes live.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=Cinzel:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --gold:#c9a84c;
+  --gold-light:#e8c97a;
+  --gold-dim:rgba(201,168,76,0.18);
+  --dark:#0a0a0f;
+  --dark2:#111118;
+  --dark3:#1a1a24;
+  --dark4:#0e0e16;
+  --border:rgba(201,168,76,0.18);
+  --border-mid:rgba(201,168,76,0.28);
+  --text:#e8e4d9;
+  --muted:rgba(232,228,217,0.5);
+  --muted-dim:rgba(232,228,217,0.32);
+  --green:#4caf7d;
+}
+
+html{scroll-behavior:smooth}
+body{background:var(--dark);color:var(--text);font-family:system-ui,sans-serif;font-size:16px;line-height:1.6;overflow-x:hidden}
+
+/* ── Nav ── */
+.nav{position:sticky;top:0;z-index:100;display:flex;align-items:center;justify-content:space-between;padding:0 40px;height:64px;background:rgba(10,10,15,0.88);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-bottom:1px solid var(--border)}
+.nav-logo{display:flex;align-items:center;gap:10px;text-decoration:none}
+.nav-logo-mark{width:32px;height:32px;flex-shrink:0;display:flex;align-items:center;justify-content:center}
+.nav-logo-mark img{width:100%;height:100%;object-fit:contain;mix-blend-mode:screen;filter:drop-shadow(0 0 8px rgba(201,168,76,0.5))}
+.nav-name{font-family:'Cinzel',serif;font-size:14px;letter-spacing:4px;color:var(--gold);text-transform:uppercase}
+.nav-right{display:flex;align-items:center;gap:20px}
+.nav-link{font-size:13px;color:var(--muted);text-decoration:none;letter-spacing:.3px;transition:color .2s}
+.nav-link:hover{color:var(--gold)}
+.btn-nav{padding:8px 20px;border-radius:7px;border:1px solid var(--gold);background:transparent;color:var(--gold);font-size:12px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;cursor:pointer;text-decoration:none;transition:all .2s;white-space:nowrap}
+.btn-nav:hover{background:var(--gold);color:var(--dark)}
+
+/* ── Hero ── */
+.hero{min-height:calc(100vh - 64px);display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:80px 24px 100px;position:relative;overflow:hidden}
+.hero-glow{position:absolute;top:-10%;left:50%;transform:translateX(-50%);width:700px;height:700px;border-radius:50%;background:radial-gradient(circle,rgba(201,168,76,0.07) 0%,transparent 70%);pointer-events:none}
+.hero-grid{position:absolute;inset:0;background-image:linear-gradient(rgba(201,168,76,0.04) 1px,transparent 1px),linear-gradient(90deg,rgba(201,168,76,0.04) 1px,transparent 1px);background-size:60px 60px;mask-image:radial-gradient(ellipse 80% 60% at 50% 50%,black 20%,transparent 80%);pointer-events:none}
+.hero-eyebrow{font-family:'Cinzel',serif;font-size:10px;letter-spacing:5px;text-transform:uppercase;color:var(--gold);margin-bottom:28px;display:inline-flex;align-items:center;gap:10px}
+.hero-eyebrow::before,.hero-eyebrow::after{content:'';display:block;width:24px;height:1px;background:var(--gold);opacity:.5}
+.hero-h1{font-family:'Cormorant Garamond',serif;font-size:clamp(38px,6vw,80px);font-weight:300;line-height:1.15;color:#fff;margin-bottom:28px;max-width:860px;font-style:italic}
+.hero-h1 em{font-style:normal;color:var(--gold)}
+.hero-sub{font-size:clamp(15px,1.8vw,19px);line-height:1.7;color:var(--muted);max-width:560px;margin-bottom:48px;font-weight:400}
+.hero-cta{display:flex;gap:14px;flex-wrap:wrap;justify-content:center}
+.btn-primary{padding:15px 36px;border-radius:8px;border:none;background:var(--gold);color:var(--dark);font-size:13px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;cursor:pointer;text-decoration:none;transition:all .25s;display:inline-block}
+.btn-primary:hover{background:var(--gold-light);transform:translateY(-2px);box-shadow:0 8px 28px rgba(201,168,76,0.3)}
+.btn-secondary{padding:15px 36px;border-radius:8px;border:1px solid var(--border-mid);background:transparent;color:var(--muted);font-size:13px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;cursor:pointer;text-decoration:none;transition:all .25s;display:inline-block}
+.btn-secondary:hover{border-color:var(--gold);color:var(--gold)}
+.hero-note{margin-top:24px;font-size:12px;color:var(--muted-dim);letter-spacing:.5px}
+
+/* ── Section shared ── */
+section{padding:96px 24px}
+.section-inner{max-width:1100px;margin:0 auto}
+.section-label{font-family:'Cinzel',serif;font-size:10px;letter-spacing:5px;text-transform:uppercase;color:var(--gold);margin-bottom:16px;display:block}
+.section-h2{font-family:'Cormorant Garamond',serif;font-size:clamp(28px,4vw,50px);font-weight:300;line-height:1.2;color:#fff;margin-bottom:16px}
+.section-sub{font-size:16px;color:var(--muted);line-height:1.7;max-width:580px}
+.divider{width:50px;height:1px;background:var(--gold);opacity:.35;margin:0 auto 64px}
+
+/* ── How it works ── */
+.how{background:var(--dark2);border-top:1px solid var(--border);border-bottom:1px solid var(--border)}
+.how-header{text-align:center;margin-bottom:72px}
+.steps{display:grid;grid-template-columns:repeat(4,1fr);gap:0;position:relative}
+.steps::before{content:'';position:absolute;top:36px;left:calc(12.5% + 18px);right:calc(12.5% + 18px);height:1px;background:linear-gradient(90deg,transparent,var(--gold),transparent);opacity:.3;pointer-events:none}
+.step{display:flex;flex-direction:column;align-items:center;text-align:center;padding:0 20px;position:relative}
+.step-num{width:72px;height:72px;border-radius:50%;border:1px solid var(--border-mid);background:var(--dark3);display:flex;align-items:center;justify-content:center;font-size:28px;margin-bottom:20px;position:relative;z-index:1}
+.step-title{font-family:'Cinzel',serif;font-size:12px;letter-spacing:2px;text-transform:uppercase;color:var(--gold);margin-bottom:10px}
+.step-body{font-size:13px;color:var(--muted);line-height:1.6}
+
+/* ── Features ── */
+.features-header{text-align:center;margin-bottom:16px}
+.features-header .section-sub{margin:0 auto}
+.features-grid{margin-top:64px;display:grid;grid-template-columns:repeat(3,1fr);gap:20px}
+.fcard{background:var(--dark2);border:1px solid var(--border);border-radius:12px;padding:28px 24px;transition:all .25s;position:relative;overflow:hidden}
+.fcard::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,var(--gold),transparent);opacity:0;transition:opacity .3s}
+.fcard:hover{border-color:var(--border-mid);transform:translateY(-3px)}
+.fcard:hover::before{opacity:.5}
+.fcard-icon{font-size:26px;margin-bottom:16px;display:block}
+.fcard-title{font-family:'Cinzel',serif;font-size:12px;letter-spacing:2px;text-transform:uppercase;color:var(--gold);margin-bottom:10px}
+.fcard-body{font-size:13px;color:var(--muted);line-height:1.65}
+
+/* ── Who it's for ── */
+.wif{background:var(--dark3);border-top:1px solid var(--border);border-bottom:1px solid var(--border)}
+.wif-inner{display:grid;grid-template-columns:1fr 1fr;gap:80px;align-items:center;max-width:1100px;margin:0 auto}
+.wif-text .section-sub{max-width:none}
+.wif-list{list-style:none;margin-top:28px;display:flex;flex-direction:column;gap:14px}
+.wif-list li{display:flex;align-items:flex-start;gap:12px;font-size:14px;color:var(--muted);line-height:1.55}
+.wif-list li::before{content:'✓';color:var(--gold);font-size:12px;font-weight:700;flex-shrink:0;margin-top:2px}
+.wif-visual{background:var(--dark2);border:1px solid var(--border);border-radius:14px;padding:32px;position:relative}
+.wif-screen{background:#1a1a1a;border-radius:10px;overflow:hidden;aspect-ratio:16/9;display:flex;align-items:flex-end;position:relative}
+.wif-bg{position:absolute;inset:0;background:linear-gradient(160deg,#1c1c2e 0%,#2a2a3e 40%,#1a1a2a 100%)}
+.wif-lt{position:absolute;bottom:0;left:0;right:0;background:linear-gradient(0deg,rgba(0,0,0,.9) 0%,rgba(0,0,0,.7) 70%,transparent 100%);padding:16px 24px 20px}
+.wif-lt-ref{font-family:'Cinzel',serif;font-size:9px;letter-spacing:3px;color:var(--gold);margin-bottom:6px;display:flex;align-items:center;gap:8px}
+.wif-lt-ref::before{content:'';display:block;width:16px;height:1px;background:var(--gold);opacity:.6}
+.wif-lt-text{font-family:'Cormorant Garamond',serif;font-size:13px;color:#fff;font-style:italic;line-height:1.5}
+.wif-lt-tr{font-size:7px;letter-spacing:2px;text-transform:uppercase;color:rgba(255,255,255,.3);margin-top:5px}
+.wif-badge{position:absolute;top:12px;right:12px;background:rgba(76,175,125,.15);border:1px solid rgba(76,175,125,.35);border-radius:6px;padding:5px 10px;font-size:9px;letter-spacing:1.5px;text-transform:uppercase;color:#4caf7d;display:flex;align-items:center;gap:5px}
+.wif-dot{width:5px;height:5px;border-radius:50%;background:#4caf7d;animation:blink 2s infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+
+/* ── Pricing ── */
+.pricing-header{text-align:center;margin-bottom:64px}
+.pricing-header .section-sub{margin:0 auto}
+.pricing-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;max-width:960px;margin:0 auto}
+.pcard{background:var(--dark2);border:1px solid var(--border);border-radius:14px;padding:36px 28px;display:flex;flex-direction:column;gap:0;position:relative;transition:all .25s}
+.pcard.featured{border-color:rgba(201,168,76,.5);background:var(--dark3)}
+.pcard.featured::before{content:'Most Popular';position:absolute;top:-13px;left:50%;transform:translateX(-50%);background:var(--gold);color:var(--dark);font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;padding:4px 16px;border-radius:20px;white-space:nowrap}
+.pcard-tier{font-family:'Cinzel',serif;font-size:11px;letter-spacing:3px;text-transform:uppercase;color:var(--muted);margin-bottom:16px}
+.pcard-price{font-family:'Cormorant Garamond',serif;font-size:52px;font-weight:300;color:#fff;line-height:1;margin-bottom:4px;display:flex;align-items:baseline;gap:1px}
+.pcard-price span{font-size:inherit;font-family:inherit;font-weight:inherit;color:#fff;vertical-align:baseline}
+.pcard-price sub{font-family:system-ui,sans-serif;font-size:14px;color:var(--muted);font-weight:400;line-height:1;margin-left:2px;align-self:flex-end;padding-bottom:5px}
+.pcard-period{font-size:12px;color:var(--muted-dim);letter-spacing:.5px;margin-bottom:28px}
+.pcard-divider{height:1px;background:var(--border);margin-bottom:24px}
+.pcard-features{list-style:none;display:flex;flex-direction:column;gap:12px;margin-bottom:32px;flex:1}
+.pcard-features li{display:flex;align-items:flex-start;gap:10px;font-size:13px;color:var(--muted);line-height:1.45}
+.pcard-features li .check{color:var(--gold);font-size:11px;flex-shrink:0;margin-top:1px}
+.pcard-features li .muted-check{color:var(--muted-dim);font-size:11px;flex-shrink:0;margin-top:1px}
+.btn-tier{width:100%;padding:13px;border-radius:8px;font-size:12px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;cursor:pointer;text-decoration:none;text-align:center;display:block;transition:all .22s}
+.btn-tier-outline{border:1px solid var(--border-mid);background:transparent;color:var(--muted)}
+.btn-tier-outline:hover{border-color:var(--gold);color:var(--gold)}
+.btn-tier-gold{border:none;background:var(--gold);color:var(--dark)}
+.btn-tier-gold:hover{background:var(--gold-light);transform:translateY(-1px)}
+.btn-tier-dark{border:1px solid var(--border-mid);background:rgba(201,168,76,.07);color:var(--gold)}
+.btn-tier-dark:hover{background:rgba(201,168,76,.16)}
+.btn-tier-waitlist{border:none;background:var(--gold);color:var(--dark)}
+.btn-tier-waitlist:hover{background:var(--gold-light);transform:translateY(-1px)}
+.pcard-coming{display:inline-block;font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--amber);background:rgba(232,162,58,.1);border:1px solid rgba(232,162,58,.25);border-radius:20px;padding:3px 10px;margin-bottom:12px}
+/* Waitlist modal */
+.wl-modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:200;display:none;align-items:center;justify-content:center;padding:20px}
+.wl-modal-bg.open{display:flex}
+.wl-modal{background:var(--dark2);border:1px solid var(--border-mid);border-radius:14px;padding:36px 32px;width:100%;max-width:420px;position:relative}
+.wl-modal-close{position:absolute;top:14px;right:18px;background:none;border:none;color:var(--muted);font-size:20px;cursor:pointer;line-height:1;padding:4px;transition:color .2s}
+.wl-modal-close:hover{color:var(--gold)}
+.wl-modal-logo{width:36px;height:36px;margin:0 auto 20px;display:block;object-fit:contain;mix-blend-mode:screen;filter:drop-shadow(0 0 6px rgba(201,168,76,.3))}
+.wl-modal-title{font-family:'Cinzel',serif;font-size:14px;letter-spacing:2px;color:var(--gold);text-align:center;margin-bottom:10px}
+.wl-modal-body{font-size:14px;color:var(--muted);text-align:center;line-height:1.65;margin-bottom:28px}
+.wl-modal-form{display:flex;flex-direction:column;gap:10px}
+.wl-modal-inp{width:100%;background:var(--dark);border:1px solid var(--border);border-radius:7px;padding:11px 14px;color:var(--text);font-size:14px;outline:none}
+.wl-modal-inp:focus{border-color:var(--gold)}
+.wl-modal-inp::placeholder{color:var(--muted-dim)}
+.wl-modal-submit{padding:13px;border-radius:8px;border:none;background:var(--gold);color:var(--dark);font-size:12px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;cursor:pointer;transition:all .22s}
+.wl-modal-submit:hover{background:var(--gold-light)}
+.wl-modal-note{font-size:11px;color:var(--muted-dim);text-align:center;letter-spacing:.3px}
+.wl-modal-success{display:none;text-align:center;padding:12px 0}
+.wl-modal-success-icon{font-size:32px;margin-bottom:12px}
+.wl-modal-success-msg{font-size:14px;color:var(--green);line-height:1.6}
+:root{--amber:#e8a23a}
+
+/* ── Footer ── */
+footer{background:var(--dark4);border-top:1px solid var(--border);padding:48px 24px}
+.footer-inner{max-width:1100px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:24px}
+.footer-logo{display:inline-flex;align-items:center;gap:10px;text-decoration:none}
+.footer-logo img{width:28px;height:28px;object-fit:contain;mix-blend-mode:screen;filter:drop-shadow(0 0 5px rgba(201,168,76,0.3))}
+.footer-logo-name{font-family:'Cinzel',serif;font-size:13px;letter-spacing:4px;color:var(--gold);text-transform:uppercase}
+.footer-tagline{font-size:12px;color:var(--muted-dim);letter-spacing:.5px;margin-top:4px}
+.footer-links{display:flex;gap:28px}
+.footer-link{font-size:12px;color:var(--muted-dim);text-decoration:none;letter-spacing:.5px;transition:color .2s}
+.footer-link:hover{color:var(--gold)}
+.footer-copy{font-size:11px;color:var(--muted-dim);letter-spacing:.3px}
+
+/* ── Responsive ── */
+@media(max-width:900px){
+  .nav{padding:0 20px}
+  .nav-right .nav-link{display:none}
+  .steps{grid-template-columns:repeat(2,1fr);gap:40px}
+  .steps::before{display:none}
+  .features-grid{grid-template-columns:repeat(2,1fr)}
+  .wif-inner{grid-template-columns:1fr;gap:48px}
+  .pricing-grid{grid-template-columns:1fr;max-width:400px}
+}
+@media(max-width:600px){
+  section{padding:64px 20px}
+  .hero{padding:60px 20px 80px}
+  .features-grid{grid-template-columns:1fr}
+  .steps{grid-template-columns:1fr;gap:36px}
+  .footer-inner{flex-direction:column;text-align:center}
+  .footer-links{justify-content:center}
+  .hero-cta{flex-direction:column;align-items:center}
+  .btn-primary,.btn-secondary{width:100%;max-width:280px;text-align:center}
+}
+</style>
+</head>
+<body>
+
+<!-- ── Navigation ── -->
+<nav class="nav">
+  <a href="#" class="nav-logo">
+    <div class="nav-logo-mark"><img src="logo.png" alt="Conduit logo"></div>
+    <span class="nav-name">Conduit</span>
+  </a>
+  <div class="nav-right">
+    <a href="#how-it-works" class="nav-link">How it works</a>
+    <a href="#features" class="nav-link">Features</a>
+    <a href="#pricing" class="nav-link">Pricing</a>
+    <a href="app.html" class="btn-nav">Get Started</a>
+  </div>
+</nav>
+
+<!-- ── Hero ── -->
+<section class="hero">
+  <div class="hero-glow"></div>
+  <div class="hero-grid"></div>
+  <span class="hero-eyebrow">For church media teams</span>
+  <h1 class="hero-h1">The Word on screen,<br>the moment <em>it's spoken</em></h1>
+  <p class="hero-sub">Conduit listens to your pastor in real time, detects Bible verse references automatically, and displays them on screen — one tap to confirm before anything goes live.</p>
+  <div class="hero-cta">
+    <a href="app.html" class="btn-primary">Try Conduit Free</a>
+    <a href="#how-it-works" class="btn-secondary">See how it works</a>
+  </div>
+  <p class="hero-note">No account required &nbsp;·&nbsp; Works in Chrome &nbsp;·&nbsp; KJV included free</p>
+</section>
+
+<!-- ── How it works ── -->
+<section class="how" id="how-it-works">
+  <div class="section-inner">
+    <div class="how-header">
+      <span class="section-label">Simple by design</span>
+      <h2 class="section-h2">From spoken word to screen<br>in seconds</h2>
+    </div>
+    <div class="steps">
+      <div class="step">
+        <div class="step-num">🎙</div>
+        <div class="step-title">Pastor speaks</div>
+        <p class="step-body">Conduit listens via your device microphone — no extra hardware, no wires.</p>
+      </div>
+      <div class="step">
+        <div class="step-num">✦</div>
+        <div class="step-title">AI detects</div>
+        <p class="step-body">Verse references — direct and indirect — are identified in real time using speech recognition and AI.</p>
+      </div>
+      <div class="step">
+        <div class="step-num">✓</div>
+        <div class="step-title">Team confirms</div>
+        <p class="step-body">Your media operator sees a preview and confirms with one tap before anything appears on screen.</p>
+      </div>
+      <div class="step">
+        <div class="step-num">✝</div>
+        <div class="step-title">On screen</div>
+        <p class="step-body">The verse slides up as a lower-third overlay or full-screen display — beautifully, instantly.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── Features ── -->
+<section id="features">
+  <div class="section-inner">
+    <div class="features-header">
+      <span class="section-label">Built for Sunday</span>
+      <h2 class="section-h2">Everything your media desk needs</h2>
+      <p class="section-sub">Conduit handles the technical side so your team can focus on worship, not typing.</p>
+    </div>
+    <div class="features-grid">
+      <div class="fcard">
+        <span class="fcard-icon">🎙</span>
+        <div class="fcard-title">Natural speech detection</div>
+        <p class="fcard-body">Catches verses spoken naturally — "turn to John three sixteen" — not just formal references. No training required.</p>
+      </div>
+      <div class="fcard">
+        <span class="fcard-icon">✦</span>
+        <div class="fcard-title">AI-powered fallback</div>
+        <p class="fcard-body">When a reference is indirect or paraphrased, Claude AI analyses the transcript and suggests the most likely verse.</p>
+      </div>
+      <div class="fcard">
+        <span class="fcard-icon">▬</span>
+        <div class="fcard-title">Lower-third overlay</div>
+        <p class="fcard-body">Verse text slides up as a cinema-quality lower-third over your live camera feed, or fills the screen entirely.</p>
+      </div>
+      <div class="fcard">
+        <span class="fcard-icon">⏭</span>
+        <div class="fcard-title">Consecutive verse pre-loading</div>
+        <p class="fcard-body">When a verse is confirmed, the next verse in the chapter pre-loads silently — ready for one-tap display.</p>
+      </div>
+      <div class="fcard">
+        <span class="fcard-icon">📖</span>
+        <div class="fcard-title">Any verse in the Bible</div>
+        <p class="fcard-body">Full Old and New Testament coverage. Search manually by book, chapter, and verse as a backup at any time.</p>
+      </div>
+      <div class="fcard">
+        <span class="fcard-icon">🗒</span>
+        <div class="fcard-title">Sermon plan upload</div>
+        <p class="fcard-body">Paste or upload your sermon notes. Conduit extracts all references and queues them up before the service starts.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── Who it's for ── -->
+<section class="wif">
+  <div class="wif-inner">
+    <div class="wif-text">
+      <span class="section-label">Who it's for</span>
+      <h2 class="section-h2">Built for church media teams of every size</h2>
+      <p class="section-sub">Whether you're a one-person volunteer or a full AV team, Conduit fits your Sunday workflow.</p>
+      <ul class="wif-list">
+        <li>Volunteer operators with no technical background can use it from day one</li>
+        <li>Works alongside ProPresenter, Proclaim, or any existing presentation software</li>
+        <li>Runs entirely in Chrome — no app to install, no IT department required</li>
+        <li>The confirm step means nothing goes live by accident</li>
+        <li>Pop-out projector window works with any dual-monitor setup</li>
+        <li>Demo mode lets you rehearse the full workflow without a live service</li>
+      </ul>
+    </div>
+    <div class="wif-visual">
+      <div class="wif-screen">
+        <div class="wif-bg"></div>
+        <div class="wif-badge"><span class="wif-dot"></span> Live</div>
+        <div class="wif-lt">
+          <div class="wif-lt-ref">John 3:16</div>
+          <div class="wif-lt-text">"For God so loved the world, that he gave his only begotten Son, that whosoever believeth in him should not perish, but have everlasting life."</div>
+          <div class="wif-lt-tr">KJV</div>
+        </div>
+      </div>
+      <p style="margin-top:16px;font-size:12px;color:var(--muted-dim);text-align:center;letter-spacing:.3px">Live lower-third overlay — exactly as your congregation sees it</p>
+    </div>
+  </div>
+</section>
+
+<!-- ── Pricing ── -->
+<section id="pricing">
+  <div class="section-inner">
+    <div class="pricing-header">
+      <span class="section-label">Pricing</span>
+      <h2 class="section-h2">Start free today</h2>
+      <p class="section-sub">The full app is free to use right now. Paid plans are coming soon — join the waitlist to be first in line.</p>
+    </div>
+    <div class="pricing-grid">
+
+      <!-- Free -->
+      <div class="pcard">
+        <div class="pcard-tier">Free</div>
+        <div class="pcard-price">£<span>0</span></div>
+        <div class="pcard-period">forever</div>
+        <div class="pcard-divider"></div>
+        <ul class="pcard-features">
+          <li><span class="check">✓</span> Demo mode with sample sermons</li>
+          <li><span class="check">✓</span> Manual verse search</li>
+          <li><span class="check">✓</span> Lower-third & full-screen display</li>
+          <li><span class="check">✓</span> KJV translation</li>
+          <li><span class="check">✓</span> 1 user</li>
+          <li><span class="muted-check">–</span> <span style="opacity:.45">Live mic detection</span></li>
+          <li><span class="muted-check">–</span> <span style="opacity:.45">AI verse detection</span></li>
+          <li><span class="muted-check">–</span> <span style="opacity:.45">Sermon plan upload</span></li>
+        </ul>
+        <a href="app.html" class="btn-tier btn-tier-outline">Get Started</a>
+      </div>
+
+      <!-- Standard -->
+      <div class="pcard featured">
+        <div class="pcard-tier">Standard</div>
+        <div class="pcard-price">£<span>19</span><sub>/mo</sub></div>
+        <span class="pcard-coming">Coming soon</span>
+        <div class="pcard-divider"></div>
+        <ul class="pcard-features">
+          <li><span class="check">✓</span> Everything in Free</li>
+          <li><span class="check">✓</span> Live microphone detection</li>
+          <li><span class="check">✓</span> AI verse detection (Claude)</li>
+          <li><span class="check">✓</span> Sermon plan upload &amp; parsing</li>
+          <li><span class="check">✓</span> Consecutive verse pre-loading</li>
+          <li><span class="check">✓</span> Unlimited verses per service</li>
+          <li><span class="check">✓</span> Up to 3 users</li>
+          <li><span class="muted-check">–</span> <span style="opacity:.45">Multi-screen sync</span></li>
+        </ul>
+        <button class="btn-tier btn-tier-waitlist" onclick="openWaitlist()">Join the Waitlist</button>
+      </div>
+
+      <!-- Pro -->
+      <div class="pcard">
+        <div class="pcard-tier">Pro</div>
+        <div class="pcard-price">£<span>39</span><sub>/mo</sub></div>
+        <span class="pcard-coming">Coming soon</span>
+        <div class="pcard-divider"></div>
+        <ul class="pcard-features">
+          <li><span class="check">✓</span> Everything in Standard</li>
+          <li><span class="check">✓</span> Multi-screen sync</li>
+          <li><span class="check">✓</span> Planning Center integration</li>
+          <li><span class="check">✓</span> Multiple translations</li>
+          <li><span class="check">✓</span> Unlimited users</li>
+          <li><span class="check">✓</span> Priority support</li>
+          <li><span class="check">✓</span> Custom lower-third branding</li>
+          <li><span class="check">✓</span> Early access to new features</li>
+        </ul>
+        <button class="btn-tier btn-tier-dark" onclick="openWaitlist()">Join the Waitlist</button>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- ── Footer ── -->
+<footer>
+  <div class="footer-inner">
+    <div>
+      <a href="#" class="footer-logo">
+        <img src="logo.png" alt="Conduit logo">
+        <span class="footer-logo-name">Conduit</span>
+      </a>
+      <p class="footer-tagline">The Word on screen, the moment it's spoken.</p>
+    </div>
+    <div class="footer-links">
+      <a href="#how-it-works" class="footer-link">How it works</a>
+      <a href="#features" class="footer-link">Features</a>
+      <a href="#pricing" class="footer-link">Pricing</a>
+      <a href="app.html" class="footer-link">Open App</a>
+    </div>
+    <p class="footer-copy">&copy; 2026 Conduit. All rights reserved.</p>
+  </div>
+</footer>
+
+<!-- Waitlist modal -->
+<div class="wl-modal-bg" id="wl-modal-bg" onclick="closeWaitlist(event)">
+  <div class="wl-modal">
+    <button class="wl-modal-close" onclick="closeWaitlist()">&times;</button>
+    <img src="logo.png" alt="Conduit" class="wl-modal-logo">
+    <div class="wl-modal-title">Paid plans coming soon</div>
+    <p class="wl-modal-body">Join the waitlist and we'll let you know the moment Standard and Pro plans launch. No spam — one email, when it's ready.</p>
+    <div class="wl-modal-form" id="wl-form">
+      <input class="wl-modal-inp" id="wl-email" type="email" placeholder="your@email.com" autocomplete="email">
+      <button class="wl-modal-submit" onclick="submitWaitlist()">Notify Me</button>
+      <p class="wl-modal-note">No account needed &nbsp;·&nbsp; Unsubscribe any time</p>
+    </div>
+    <div class="wl-modal-success" id="wl-success">
+      <div class="wl-modal-success-icon">✓</div>
+      <p class="wl-modal-success-msg">You're on the list!<br>We'll be in touch when paid plans go live.</p>
+    </div>
+  </div>
+</div>
+
+<script>
+function openWaitlist(){
+  document.getElementById("wl-modal-bg").classList.add("open");
+  setTimeout(()=>document.getElementById("wl-email").focus(),120);
+}
+function closeWaitlist(e){
+  if(e&&e.target!==document.getElementById("wl-modal-bg"))return;
+  document.getElementById("wl-modal-bg").classList.remove("open");
+}
+function submitWaitlist(){
+  const email=document.getElementById("wl-email").value.trim();
+  if(!email||!email.includes("@"))return;
+  document.getElementById("wl-form").style.display="none";
+  document.getElementById("wl-success").style.display="block";
+}
+document.addEventListener("keydown",e=>{
+  if(e.key==="Escape")document.getElementById("wl-modal-bg").classList.remove("open");
+});
+</script>
+</body>
+</html>

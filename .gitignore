@@ -1,0 +1,10 @@
+# Secrets — never commit. Note netlify.toml publishes ".", so a secrets file
+# here also risks being deployed. Prefer Netlify environment variables.
+.env
+.env.*
+!.env.example
+
+node_modules
+presentation/dist
+.netlify
+.DS_Store
